@@ -7,6 +7,7 @@ interface GrammarCheckOptions {
   provider: AIProvider;
   model: string;
   apiKey: string;
+  baseURL?: string;
   language: string;
 }
 
@@ -38,7 +39,7 @@ export async function checkGrammar(
   }
 
   try {
-    const model = getModel(provider, modelId, apiKey);
+    const model = getModel(provider, modelId, apiKey, options.baseURL);
 
     const { text: responseText } = await generateText({
       model,
