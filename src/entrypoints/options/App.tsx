@@ -247,6 +247,29 @@ function SettingsTab({
           ))}
         </select>
       </div>
+	  
+{settings.provider === 'openai' && (
+  <div>
+    <label className="block font-medium text-gray-900 mb-2">
+      OpenAI Base URL
+    </label>
+    <input
+      type="text"
+      value={settings.openAIBaseURL || ''}
+      onChange={(e) =>
+        saveSettings({
+          ...settings,
+          openAIBaseURL: e.target.value,
+        })
+      }
+      placeholder="Leave empty for OpenAI, or use http://localhost:3000/api"
+      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+    />
+    <p className="text-sm text-gray-500 mt-1">
+      Optional. Use a custom OpenAI-compatible endpoint such as Open WebUI, Ollama, LM Studio, or LocalAI.
+    </p>
+  </div>
+)}
 
        <div>
          <label className="block font-medium text-gray-900 mb-2">Model</label>
