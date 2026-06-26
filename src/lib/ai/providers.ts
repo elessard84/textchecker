@@ -1,5 +1,6 @@
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenAI } from '@ai-sdk/openai';
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import type { AIProvider } from '@/types';
 
@@ -13,10 +14,15 @@ export function createAIProvider(
       return createGoogleGenerativeAI({ apiKey });
 
     case 'openai':
-      return createOpenAI({
-        apiKey,
-        ...(baseURL ? { baseURL } : {}),
-      });
+      if (baseURL) {
+        return createOpenAICompatible({
+          name: 'openai-compatible',
+          apiKey,
+          baseURL,
+        });
+      }
+
+      return createOpenAI({ apiKey });
 
     case 'anthropic':
       return createAnthropic({ apiKey });
@@ -33,5 +39,10 @@ export function getModel(
   baseURL?: string
 ) {
   const aiProvider = createAIProvider(provider, apiKey, baseURL);
+
+  if (provider === 'openai' && baseURL && 'chatModel' in aiProvider) {
+    return aiProvider.chatModel(modelId);
+  }
+
   return aiProvider(modelId);
 }

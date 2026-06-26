@@ -41,12 +41,17 @@ export async function checkGrammar(
   try {
     const model = getModel(provider, modelId, apiKey, options.baseURL);
 
-    const { text: responseText } = await generateText({
-      model,
-      system: GRAMMAR_CHECK_SYSTEM_PROMPT,
-      prompt: createGrammarCheckPrompt(text, language),
-      temperature: 0.1, // Low temperature for consistent results
-    });
+const { text: responseText } = await generateText({
+  model,
+  instructions: GRAMMAR_CHECK_SYSTEM_PROMPT,
+  messages: [
+    {
+      role: 'user',
+      content: createGrammarCheckPrompt(text, language),
+    },
+  ],
+  temperature: 0.1,
+});
 
     // Parse the JSON response
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
@@ -61,14 +66,28 @@ export async function checkGrammar(
     }
 
     const parsed: AIGrammarResponse = JSON.parse(jsonMatch[0]);
+console.log('Parsed response:', parsed);
+console.log('Suggestions:', parsed.suggestions);
 
     // Validate and filter suggestions
     const validSuggestions: GrammarSuggestion[] = parsed.suggestions
-      .filter((s) => {
-        // Verify the original text matches the actual text at the specified position
-        const actualText = text.substring(s.startIndex, s.endIndex);
-        return actualText === s.original;
-      })
+.filter((s) => {
+  if (!s.original || !s.replacement) return false;
+
+  const actualText = text.substring(s.startIndex, s.endIndex);
+
+  if (actualText === s.original) return true;
+
+  const fallbackIndex = text.indexOf(s.original);
+  if (fallbackIndex === -1) {
+    console.warn('Rejected suggestion:', s, 'Actual text:', actualText);
+    return false;
+  }
+
+  s.startIndex = fallbackIndex;
+  s.endIndex = fallbackIndex + s.original.length;
+  return true;
+})
       .map((s, index) => ({
         id: `suggestion-${Date.now()}-${index}`,
         original: s.original,
@@ -105,12 +124,17 @@ export async function rewriteText(
   try {
     const model = getModel(provider, modelId, apiKey);
 
-    const { text: rewrittenText } = await generateText({
-      model,
-      system: REWRITE_SYSTEM_PROMPT,
-      prompt: createRewritePrompt(text, style),
-      temperature: 0.7, // Higher temperature for creative rewriting
-    });
+const { text: rewrittenText } = await generateText({
+  model,
+  instructions: REWRITE_SYSTEM_PROMPT,
+  messages: [
+    {
+      role: 'user',
+      content: createRewritePrompt(text, style),
+    },
+  ],
+  temperature: 0.7,
+});
 
     return rewrittenText.trim();
   } catch (error) {

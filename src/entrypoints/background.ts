@@ -58,8 +58,9 @@ export default defineBackground(() => {
              provider: settings.provider,
              model: modelId || settings.model,
              apiKey,
+             baseURL: settings.provider === 'openai' ? settings.openAIBaseURL : undefined,
              language: settings.language,
-           });
+});
 
           // Filter out words in personal dictionary
           const dictionary = await dictionaryStorage.getValue();
@@ -108,7 +109,8 @@ export default defineBackground(() => {
              provider: settings.provider,
              model: modelId || settings.model,
              apiKey,
-           });
+             baseURL: settings.provider === 'openai' ? settings.openAIBaseURL : undefined,
+});
 
           sendResponse({ success: true, result: rewritten });
           break;

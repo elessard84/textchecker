@@ -32,13 +32,19 @@ export default function App() {
     setStats(loadedStats);
   }
 
-  async function saveSettings(newSettings: Settings) {
-    setSettings(newSettings);
-    setSaveStatus('saving');
+async function saveSettings(newSettings: Settings) {
+  setSettings(newSettings);
+  setSaveStatus('saving');
+
+  try {
     await settingsStorage.setValue(newSettings);
     setSaveStatus('saved');
     setTimeout(() => setSaveStatus('idle'), 2000);
+  } catch (error) {
+    console.error('Failed to save settings:', error);
+    setSaveStatus('idle');
   }
+}
 
   async function saveApiKey(provider: AIProvider, key: string) {
     const newKeys = { ...apiKeys, [provider]: key };
