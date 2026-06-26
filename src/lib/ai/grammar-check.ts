@@ -66,28 +66,31 @@ const { text: responseText } = await generateText({
     }
 
     const parsed: AIGrammarResponse = JSON.parse(jsonMatch[0]);
-console.log('Parsed response:', parsed);
-console.log('Suggestions:', parsed.suggestions);
 
     // Validate and filter suggestions
-    const validSuggestions: GrammarSuggestion[] = parsed.suggestions
-.filter((s) => {
-  if (!s.original || !s.replacement) return false;
+const validSuggestions: GrammarSuggestion[] = parsed.suggestions
+  .filter((s) => {
+    if (!s.original || !s.replacement) {
+      return false;
+    }
 
-  const actualText = text.substring(s.startIndex, s.endIndex);
+    // Fast path: the model returned correct character positions.
+    const actualText = text.substring(s.startIndex, s.endIndex);
+    if (actualText === s.original) {
+      return true;
+    }
 
-  if (actualText === s.original) return true;
+    // Recover from incorrect indexes by locating the original text.
+    const fallbackIndex = text.indexOf(s.original);
+    if (fallbackIndex < 0) {
+      return false;
+    }
 
-  const fallbackIndex = text.indexOf(s.original);
-  if (fallbackIndex === -1) {
-    console.warn('Rejected suggestion:', s, 'Actual text:', actualText);
-    return false;
-  }
+    s.startIndex = fallbackIndex;
+    s.endIndex = fallbackIndex + s.original.length;
 
-  s.startIndex = fallbackIndex;
-  s.endIndex = fallbackIndex + s.original.length;
-  return true;
-})
+    return true;
+  })
       .map((s, index) => ({
         id: `suggestion-${Date.now()}-${index}`,
         original: s.original,
