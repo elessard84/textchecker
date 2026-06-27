@@ -96,6 +96,7 @@ src/lib/ai/prompts/
 ├── rewrite.md
 ├── proofread.md
 └── translate.md
+```
 
 ## Credits
 
