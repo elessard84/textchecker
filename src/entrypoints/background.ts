@@ -3,7 +3,6 @@ import { settingsStorage, apiKeysStorage, getCachedResult, setCachedResult, incr
 import type { GrammarSuggestion } from '@/types';
 
 export default defineBackground(() => {
-  console.log('TextChecker background script loaded');
 
   // Handle messages from content scripts and popup
   browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {

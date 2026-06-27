@@ -14,6 +14,7 @@ export interface Settings {
   provider: AIProvider;
   model: string;
   customModel?: string;
+  openAIBaseURL?: string;
   checkMode: CheckMode;
   language: string;
   enabled: boolean;
@@ -53,6 +54,7 @@ export interface CacheEntry {
 export const DEFAULT_SETTINGS: Settings = {
   provider: 'google',
   model: 'gemini-2.5-flash',
+  openAIBaseURL: '',
   checkMode: 'realtime',
   language: 'auto',
   enabled: true,

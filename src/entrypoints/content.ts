@@ -16,7 +16,6 @@ export default defineContentScript({
   runAt: "document_idle",
 
   async main(ctx) {
-    console.log("TextChecker content script loaded", window.location.href);
 
     let settings: Settings = DEFAULT_SETTINGS;
     let currentSuggestions: GrammarSuggestion[] = [];
