@@ -70,27 +70,30 @@ const { text: responseText } = await generateText({
     // Validate and filter suggestions
 // Validate and filter suggestions
 const validSuggestions: GrammarSuggestion[] = parsed.suggestions
-  .filter((s) => {
-    if (!s.original || !s.replacement) {
-      return false;
-    }
+.filter((s) => {
 
-    const actualText = text.substring(s.startIndex, s.endIndex);
+    if (!s.original || !s.replacement)
+        return false;
 
-    if (actualText === s.original) {
-      return true;
-    }
+    const expected = text.substring(
+        s.startIndex,
+        s.endIndex
+    );
 
-    const fallbackIndex = text.indexOf(s.original);
+    if (expected === s.original)
+        return true;
 
-    if (fallbackIndex >= 0) {
-      s.startIndex = fallbackIndex;
-      s.endIndex = fallbackIndex + s.original.length;
-      return true;
-    }
+    const recovered = text.indexOf(s.original);
 
-    return false;
-  })
+    if (recovered < 0)
+        return false;
+
+    s.startIndex = recovered;
+    s.endIndex = recovered + s.original.length;
+
+    return true;
+
+})
   .map((s, index) => ({
     id: `suggestion-${Date.now()}-${index}`,
     original: s.original,
@@ -144,12 +147,4 @@ const { text: rewrittenText } = await generateText({
     console.error('Rewrite error:', error);
     throw error;
   }
-}
-function normalizeText(value: string): string {
-  return value
-    .normalize('NFC')
-    .replace(/\u00A0/g, ' ')
-    .replace(/[""]/g, '"')
-    .replace(/['']/g, "'")
-    .trim();
 }

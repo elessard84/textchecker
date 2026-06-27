@@ -27,7 +27,8 @@ export default defineContentScript({
     let isChecking = false;
     let unwatchSettings: (() => void) | null = null;
     let popoverCloseTimeout: ReturnType<typeof setTimeout> | null = null;
-
+    let lastRequestedText = "";
+    
     // Load initial settings
     try {
       settings = await settingsStorage.getValue();
@@ -376,23 +377,29 @@ export default defineContentScript({
       }
 
       /* Status Button - like LanguageTool */
-      .tc-status-btn {
-        position: fixed;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        padding: 6px 10px;
-        background: white;
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        cursor: pointer;
-        pointer-events: auto;
-        font-size: 13px;
-        color: #374151;
-        transition: all 0.2s;
-        z-index: 2147483646;
-      }
+.tc-status-btn {
+  position: fixed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 32px;
+  height: 32px;
+
+  padding: 0;
+  gap: 0;
+
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.1);
+  cursor: pointer;
+  pointer-events: auto;
+  font-size: 13px;
+  color: #374151;
+  transition: all 0.2s;
+  z-index: 2147483646;
+}
 
       .tc-status-btn:hover {
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -740,6 +747,28 @@ export default defineContentScript({
       pencil: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`,
     };
 
+    function getStatusButtonPosition(element: HTMLElement) {
+  const rect = element.getBoundingClientRect();
+
+  const buttonWidth = 96;
+  const buttonHeight = 34;
+  const margin = 8;
+
+  let left = rect.right - buttonWidth;
+  left = Math.max(10, Math.min(left, window.innerWidth - buttonWidth - 10));
+
+  let top = rect.bottom + margin;
+
+  // Si le bouton ne rentre pas sous le champ, on le place au-dessus
+  if (top + buttonHeight > window.innerHeight) {
+    top = rect.top - buttonHeight - margin;
+  }
+
+  top = Math.max(10, Math.min(top, window.innerHeight - buttonHeight - 10));
+
+  return { left, top };
+}
+
     // Show/update status button near the active element
     function showStatusButton(
       state: "loading" | "errors" | "clean",
@@ -753,7 +782,6 @@ export default defineContentScript({
       // Remove existing button
       shadow.querySelectorAll(".tc-status-btn").forEach((el) => el.remove());
 
-      const rect = activeElement.getBoundingClientRect();
       statusButton = document.createElement("div");
       statusButton.className = `tc-status-btn ${
         state === "loading"
@@ -763,11 +791,9 @@ export default defineContentScript({
           : "tc-no-errors"
       }`;
 
-      // Position at bottom-right of the element
-      const btnLeft = Math.min(rect.right - 80, window.innerWidth - 90);
-      const btnTop = Math.min(rect.bottom - 32, window.innerHeight - 40);
+const { left, top } = getStatusButtonPosition(activeElement);
 
-      statusButton.style.cssText = `left: ${btnLeft}px; top: ${btnTop}px;`;
+statusButton.style.cssText = `left: ${left}px; top: ${top}px;`;
 
       if (state === "loading") {
         statusButton.innerHTML = `
@@ -782,11 +808,12 @@ export default defineContentScript({
           errorCount > 1 ? "s" : ""
         } found. Click to see details.`;
       } else {
-        statusButton.innerHTML = `
-          <div class="tc-status-icon" style="color: #22c55e;">${ICONS.check}</div>
-          <span style="color: #16a34a;">All good!</span>
-        `;
-      }
+  statusButton.innerHTML = `
+    <div class="tc-status-icon" style="color: #22c55e;">
+      ${ICONS.check}
+    </div>
+  `;
+}
 
       // Prevent mousedown from triggering outside-click handlers
       statusButton.addEventListener("mousedown", (e) => {
@@ -1383,31 +1410,47 @@ export default defineContentScript({
       }
     }
 
-    const debouncedCheck = debounce(async (text: string) => {
-      if (isChecking || !activeElement) return;
-      isChecking = true;
+const debouncedCheck = debounce(async (text: string) => {
+  if (isChecking || !activeElement) return;
 
-      showStatusButton("loading");
+  const requestedText = getTextFromElement(activeElement);
 
-      try {
-        const result = await checkGrammarRequest(text);
-        if (result && activeElement) {
-          currentSuggestions = result.suggestions;
-          renderUnderlines();
+  if (requestedText.trim().length < 3) {
+    cleanup();
+    return;
+  }
 
-          if (currentSuggestions.length > 0) {
-            showStatusButton("errors", currentSuggestions.length);
-          } else {
-            showStatusButton("clean");
-          }
-        }
-      } catch (error) {
-        console.error("Grammar check error:", error);
-        hideStatusButton();
-      } finally {
-        isChecking = false;
+  isChecking = true;
+  lastRequestedText = requestedText;
+
+  showStatusButton("loading");
+
+  try {
+    const result = await checkGrammarRequest(requestedText);
+    const latestText = activeElement ? getTextFromElement(activeElement) : "";
+
+    if (latestText !== lastRequestedText || latestText.trim().length < 3) {
+      cleanup();
+      return;
+    }
+
+    if (result && activeElement) {
+      currentSuggestions = result.suggestions;
+      renderUnderlines();
+
+      if (currentSuggestions.length > 0) {
+        showStatusButton("errors", currentSuggestions.length);
+      } else {
+        showStatusButton("clean");
       }
-    }, settings.realtimeDelay);
+    }
+  } catch (error) {
+    console.error("Grammar check error:", error);
+    hideStatusButton();
+  } finally {
+    isChecking = false;
+  }
+}, settings.realtimeDelay);
 
     // Message listener for keyboard shortcut
     browser.runtime.onMessage.addListener((message) => {
@@ -1462,11 +1505,10 @@ export default defineContentScript({
         renderUnderlines();
         // Update status button position
         if (statusButton && activeElement) {
-          const rect = activeElement.getBoundingClientRect();
-          const btnLeft = Math.min(rect.right - 80, window.innerWidth - 90);
-          const btnTop = Math.min(rect.bottom - 32, window.innerHeight - 40);
-          statusButton.style.left = `${btnLeft}px`;
-          statusButton.style.top = `${btnTop}px`;
+const { left, top } = getStatusButtonPosition(activeElement);
+
+statusButton.style.left = `${left}px`;
+statusButton.style.top = `${top}px`;
         }
       }
     }, 50);
