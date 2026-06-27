@@ -78,7 +78,7 @@ Model
 qwen3:8b
 ```
 
-![Settings](assets/settings.png)
+![Settings](assets/setting.png)
 
 API Key
 
