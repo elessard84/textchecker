@@ -106,6 +106,21 @@ Original repository:
 https://github.com/codextde/textchecker
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Original ReadME
 
 # TextChecker - AI-Powered Grammar Assistant
