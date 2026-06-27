@@ -105,6 +105,7 @@ This project is based on the excellent work of **codextde**.
 Original repository:
 https://github.com/codextde/textchecker
 
+---
 
 
 
@@ -118,8 +119,7 @@ https://github.com/codextde/textchecker
 
 
 
-
-
+---
 
 Original ReadME
 
