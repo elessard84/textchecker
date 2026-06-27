@@ -68,38 +68,38 @@ const { text: responseText } = await generateText({
     const parsed: AIGrammarResponse = JSON.parse(jsonMatch[0]);
 
     // Validate and filter suggestions
+// Validate and filter suggestions
 const validSuggestions: GrammarSuggestion[] = parsed.suggestions
   .filter((s) => {
     if (!s.original || !s.replacement) {
       return false;
     }
 
-    // Fast path: the model returned correct character positions.
     const actualText = text.substring(s.startIndex, s.endIndex);
+
     if (actualText === s.original) {
       return true;
     }
 
-    // Recover from incorrect indexes by locating the original text.
     const fallbackIndex = text.indexOf(s.original);
-    if (fallbackIndex < 0) {
-      return false;
+
+    if (fallbackIndex >= 0) {
+      s.startIndex = fallbackIndex;
+      s.endIndex = fallbackIndex + s.original.length;
+      return true;
     }
 
-    s.startIndex = fallbackIndex;
-    s.endIndex = fallbackIndex + s.original.length;
-
-    return true;
+    return false;
   })
-      .map((s, index) => ({
-        id: `suggestion-${Date.now()}-${index}`,
-        original: s.original,
-        replacement: s.replacement,
-        explanation: s.explanation,
-        type: s.type,
-        startIndex: s.startIndex,
-        endIndex: s.endIndex,
-      }));
+  .map((s, index) => ({
+    id: `suggestion-${Date.now()}-${index}`,
+    original: s.original,
+    replacement: s.replacement,
+    explanation: s.explanation,
+    type: s.type,
+    startIndex: s.startIndex,
+    endIndex: s.endIndex,
+  }));
 
     return {
       suggestions: validSuggestions,
@@ -144,4 +144,12 @@ const { text: rewrittenText } = await generateText({
     console.error('Rewrite error:', error);
     throw error;
   }
+}
+function normalizeText(value: string): string {
+  return value
+    .normalize('NFC')
+    .replace(/\u00A0/g, ' ')
+    .replace(/[""]/g, '"')
+    .replace(/['']/g, "'")
+    .trim();
 }
